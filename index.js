@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const http = require("http");
+
 const {
   Client,
   GatewayIntentBits,
@@ -13,13 +15,43 @@ const {
   PermissionsBitField
 } = require("discord.js");
 
+// =====================================================
+// HTTP SERVER สำหรับ Render
+// =====================================================
+
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/plain; charset=utf-8"
+  });
+
+  res.end("💰 Robux Calculator Bot is online!");
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Web server running on port ${PORT}`);
+});
+
+// =====================================================
+// DISCORD CLIENT
+// =====================================================
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
+// =====================================================
+// BOT READY
+// =====================================================
+
 client.once("ready", () => {
   console.log(`💰 บอทคำนวณออนไลน์แล้ว: ${client.user.tag}`);
 });
+
+// =====================================================
+// CALCULATOR PANEL
+// =====================================================
 
 function createCalculatorPanel() {
   const embed = new EmbedBuilder()
@@ -63,21 +95,31 @@ function createCalculatorPanel() {
   };
 }
 
+// =====================================================
+// INTERACTIONS
+// =====================================================
+
 client.on("interactionCreate", async (interaction) => {
   try {
 
+    // =================================================
     // /setup-calculator
+    // =================================================
+
     if (interaction.isChatInputCommand()) {
 
       if (interaction.commandName === "setup-calculator") {
 
-        if (!interaction.memberPermissions.has(
-          PermissionsBitField.Flags.Administrator
-        )) {
+        if (
+          !interaction.memberPermissions.has(
+            PermissionsBitField.Flags.Administrator
+          )
+        ) {
           await interaction.reply({
             content: "❌ คำสั่งนี้ใช้ได้เฉพาะแอดมิน",
             ephemeral: true
           });
+
           return;
         }
 
@@ -94,8 +136,15 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // ปุ่ม Robux → บาท
+    // =================================================
+    // BUTTONS
+    // =================================================
+
     if (interaction.isButton()) {
+
+      // -----------------------------------------------
+      // Robux → บาท
+      // -----------------------------------------------
 
       if (interaction.customId === "robux_to_baht") {
 
@@ -115,10 +164,14 @@ client.on("interactionCreate", async (interaction) => {
         );
 
         await interaction.showModal(modal);
+
         return;
       }
 
-      // ปุ่ม บาท → Robux
+      // -----------------------------------------------
+      // บาท → Robux
+      // -----------------------------------------------
+
       if (interaction.customId === "baht_to_robux") {
 
         const modal = new ModalBuilder()
@@ -137,12 +190,20 @@ client.on("interactionCreate", async (interaction) => {
         );
 
         await interaction.showModal(modal);
+
         return;
       }
     }
 
-    // ผล Robux → บาท
+    // =================================================
+    // MODAL RESULTS
+    // =================================================
+
     if (interaction.isModalSubmit()) {
+
+      // -----------------------------------------------
+      // Robux → บาท
+      // -----------------------------------------------
 
       if (interaction.customId === "modal_robux_to_baht") {
 
@@ -154,10 +215,12 @@ client.on("interactionCreate", async (interaction) => {
         const robux = Number(raw);
 
         if (!Number.isFinite(robux) || robux <= 0) {
+
           await interaction.reply({
             content: "❌ กรุณากรอกจำนวน Robux ให้ถูกต้อง",
             ephemeral: true
           });
+
           return;
         }
 
@@ -191,7 +254,10 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      // ผล บาท → Robux
+      // -----------------------------------------------
+      // บาท → Robux
+      // -----------------------------------------------
+
       if (interaction.customId === "modal_baht_to_robux") {
 
         const raw = interaction.fields
@@ -202,10 +268,12 @@ client.on("interactionCreate", async (interaction) => {
         const baht = Number(raw);
 
         if (!Number.isFinite(baht) || baht <= 0) {
+
           await interaction.reply({
             content: "❌ กรุณากรอกจำนวนเงินให้ถูกต้อง",
             ephemeral: true
           });
+
           return;
         }
 
@@ -241,15 +309,22 @@ client.on("interactionCreate", async (interaction) => {
     }
 
   } catch (error) {
+
     console.error("❌ Interaction Error:", error);
 
     if (!interaction.replied && !interaction.deferred) {
+
       await interaction.reply({
         content: "❌ เกิดข้อผิดพลาด กรุณาลองใหม่",
         ephemeral: true
       });
+
     }
   }
 });
+
+// =====================================================
+// LOGIN
+// =====================================================
 
 client.login(process.env.TOKEN);
